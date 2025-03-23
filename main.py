@@ -96,24 +96,40 @@ def search_whole_bible():
         return
 
     results = []
+    output_text.delete(1.0, tk.END)
+    output_text.tag_config("highlight", background="yellow", foreground="black")
+
     for book in root.findall('b'):
         book_name = book.get('n')
         for chapter in book.findall('c'):
             chapter_num = chapter.get('n')
             for verse in chapter.findall('v'):
-                if query in verse.text.lower():
-                    results.append(f"{book_name} {chapter_num}:{verse.get('n')} — {verse.text}")
+                verse_text = verse.text
+                if query in verse_text.lower():
+                    result_line = f"{book_name} {chapter_num}:{verse.get('n')} — {verse_text}\n\n"
+                    start_index = output_text.index(tk.INSERT)
+                    output_text.insert(tk.END, result_line)
+                    end_index = output_text.index(tk.INSERT)
 
-    output_text.delete(1.0, tk.END)
-    if results:
-        output_text.insert(tk.END, "\n\n".join(results))
-    else:
+                    # Highlight all matches in the inserted line
+                    line_lower = result_line.lower()
+                    idx = 0
+                    while True:
+                        idx = line_lower.find(query, idx)
+                        if idx == -1:
+                            break
+                        tag_start = f"{start_index}+{idx}c"
+                        tag_end = f"{start_index}+{idx+len(query)}c"
+                        output_text.tag_add("highlight", tag_start, tag_end)
+                        idx += len(query)
+
+    if output_text.compare("end-1c", "==", "1.0"):
         output_text.insert(tk.END, "No results found.")
 
 
 # GUI setup
 root_win = tk.Tk()
-root_win.title("KJV Bible")
+root_win.title("Franks Super Cool Bible Search Thingy!")
 root_win.geometry("1920x1080")
 root_win.resizable(True, True)
 
