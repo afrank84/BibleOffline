@@ -48,7 +48,8 @@ def lookup_verse():
 # GUI setup
 root_win = tk.Tk()
 root_win.title("KJV Bible")
-root_win.attributes('-fullscreen', True)
+root_win.geometry("1920x1080")  # Set a default size, or use your preferred dimensions
+root_win.resizable(True, True)  # Allow resizing
 
 search_entry = tk.Entry(root_win, font=("Helvetica", 20))
 search_entry.pack(fill=tk.X, padx=20, pady=10)
