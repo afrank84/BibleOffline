@@ -70,7 +70,7 @@ class AutocompleteEntry(tk.Entry):
     def show_listbox(self, matches):
         if self.listbox:
             self.listbox.destroy()
-        self.listbox = tk.Listbox(root_win, height=min(6, len(matches)))
+        self.listbox = tk.Listbox(root_win, height=min(6, len(matches)), font=("Helvetica", 20), width=25)
         self.listbox.place(x=self.winfo_x(), y=self.winfo_y() + self.winfo_height())
         for match in matches:
             self.listbox.insert(tk.END, match)
@@ -89,18 +89,53 @@ class AutocompleteEntry(tk.Entry):
         self.hide_listbox()
         self.icursor(tk.END)
 
+def search_whole_bible():
+    query = full_search_entry.get().strip().lower()
+    if not query:
+        messagebox.showerror("Empty Search", "Please enter a word or phrase to search.")
+        return
+
+    results = []
+    for book in root.findall('b'):
+        book_name = book.get('n')
+        for chapter in book.findall('c'):
+            chapter_num = chapter.get('n')
+            for verse in chapter.findall('v'):
+                if query in verse.text.lower():
+                    results.append(f"{book_name} {chapter_num}:{verse.get('n')} — {verse.text}")
+
+    output_text.delete(1.0, tk.END)
+    if results:
+        output_text.insert(tk.END, "\n\n".join(results))
+    else:
+        output_text.insert(tk.END, "No results found.")
 
 
 # GUI setup
 root_win = tk.Tk()
 root_win.title("KJV Bible")
-root_win.geometry("1920x1080")  # Set a default size, or use your preferred dimensions
-root_win.resizable(True, True)  # Allow resizing
+root_win.geometry("1920x1080")
+root_win.resizable(True, True)
+
+# Label and Verse Lookup Entry (Book Chapter [Verse])
+verse_label = tk.Label(root_win, text="Verse Lookup (e.g., John 3 16)", font=("Helvetica", 16))
+verse_label.pack(padx=20, anchor='w')
 
 search_entry = AutocompleteEntry(book_names, root_win, font=("Helvetica", 20))
-search_entry.pack(fill=tk.X, padx=20, pady=10)
+search_entry.insert(0, "e.g., John 3 16")
+search_entry.pack(fill=tk.X, padx=20, pady=(0, 10))
 search_entry.bind("<Return>", lambda e: lookup_verse())
 
+# Label and Full Bible Search Entry
+full_search_label = tk.Label(root_win, text="Search Entire Bible for Word/Phrase", font=("Helvetica", 16))
+full_search_label.pack(padx=20, anchor='w')
+
+full_search_entry = tk.Entry(root_win, font=("Helvetica", 20))
+full_search_entry.insert(0, "e.g., faith")
+full_search_entry.pack(fill=tk.X, padx=20, pady=(0, 10))
+full_search_entry.bind("<Return>", lambda e: search_whole_bible())
+
+# Output Display
 output_text = tk.Text(root_win, wrap=tk.WORD, font=("Georgia", 18))
 output_text.pack(expand=True, fill=tk.BOTH, padx=20, pady=10)
 
