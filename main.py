@@ -7,8 +7,9 @@ tree = ET.parse('en_kjv.xml')
 root = tree.getroot()
 
 # Map shorthand book ID to full book name
-book_lookup = {b.get('n'): b for b in root.findall('b')}
-book_names = list(book_lookup.keys())  # "Genesis", "Exodus", etc.
+book_names = [b.get('n') for b in root.findall('b')]
+book_lookup = {name.lower(): b for name, b in zip(book_names, root.findall('b'))}
+
 
 # Search function
 def lookup_verse():
@@ -19,7 +20,7 @@ def lookup_verse():
         messagebox.showerror("Invalid Input", "Use format: Book Chapter [Verse]")
         return
 
-    book_name = parts[0]
+    book_name = parts[0].lower()
     chapter = parts[1]
     verse = parts[2] if len(parts) == 3 else None
 
@@ -45,13 +46,58 @@ def lookup_verse():
         for v in chapter_elem.findall('v'):
             output_text.insert(tk.END, f"{book_name} {chapter}:{v.get('n')} — {v.text}\n\n")
 
+class AutocompleteEntry(tk.Entry):
+    def __init__(self, book_list, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.book_list = sorted(book_list)
+        self.var = self["textvariable"] = tk.StringVar()
+        self.var.trace_add("write", self.on_change)
+
+        self.listbox = None
+
+    def on_change(self, *args):
+        typed = self.var.get()
+        if not typed:
+            self.hide_listbox()
+            return
+
+        matches = [book for book in self.book_list if book.lower().startswith(typed.lower())]
+        if matches:
+            self.show_listbox(matches)
+        else:
+            self.hide_listbox()
+
+    def show_listbox(self, matches):
+        if self.listbox:
+            self.listbox.destroy()
+        self.listbox = tk.Listbox(root_win, height=min(6, len(matches)))
+        self.listbox.place(x=self.winfo_x(), y=self.winfo_y() + self.winfo_height())
+        for match in matches:
+            self.listbox.insert(tk.END, match)
+        self.listbox.bind("<<ListboxSelect>>", self.on_select)
+
+    def hide_listbox(self):
+        if self.listbox:
+            self.listbox.destroy()
+            self.listbox = None
+
+    def on_select(self, event):
+        if not self.listbox:
+            return
+        selection = self.listbox.get(self.listbox.curselection())
+        self.var.set(selection)
+        self.hide_listbox()
+        self.icursor(tk.END)
+
+
+
 # GUI setup
 root_win = tk.Tk()
 root_win.title("KJV Bible")
 root_win.geometry("1920x1080")  # Set a default size, or use your preferred dimensions
 root_win.resizable(True, True)  # Allow resizing
 
-search_entry = tk.Entry(root_win, font=("Helvetica", 20))
+search_entry = AutocompleteEntry(book_names, root_win, font=("Helvetica", 20))
 search_entry.pack(fill=tk.X, padx=20, pady=10)
 search_entry.bind("<Return>", lambda e: lookup_verse())
 
