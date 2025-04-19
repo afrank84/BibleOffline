@@ -1,15 +1,64 @@
+import os
 import tkinter as tk
 from tkinter import messagebox
 import xml.etree.ElementTree as ET
 
-# Load and parse the KJV XML
-tree = ET.parse('en_kjv.xml')
-root = tree.getroot()
+# Function to display error messages with copy-to-clipboard functionality
+def show_error_with_copy(title, message):
+    def copy_to_clipboard():
+        root_win.clipboard_clear()
+        root_win.clipboard_append(message)
+        root_win.update()  # Keep the clipboard content after the window is closed
+        messagebox.showinfo("Copied", "Error message copied to clipboard.")
+    
+    error_window = tk.Toplevel(root_win)
+    error_window.title(title)
+    error_window.geometry("400x200")
+    error_window.resizable(False, False)
 
-# Map shorthand book ID to full book name
-book_names = [b.get('n') for b in root.findall('b')]
-book_lookup = {name.lower(): b for name, b in zip(book_names, root.findall('b'))}
+    error_label = tk.Label(error_window, text=message, wraplength=380, justify="left", font=("Helvetica", 12))
+    error_label.pack(pady=10, padx=10)
 
+    copy_button = tk.Button(error_window, text="Copy to Clipboard", command=copy_to_clipboard, font=("Helvetica", 12))
+    copy_button.pack(pady=10)
+
+    close_button = tk.Button(error_window, text="Close", command=error_window.destroy, font=("Helvetica", 12))
+    close_button.pack(pady=10)
+
+# GUI setup
+root_win = tk.Tk()
+root_win.title("Franks Super Cool Bible Search Thingy!")
+root_win.geometry("1920x1080")
+root_win.resizable(True, True)
+
+# Function to load and parse the selected Bible translation
+def load_translation(file_name):
+    global tree, root, book_names, book_lookup
+    try:
+        tree = ET.parse(file_name)
+        root = tree.getroot()
+        book_names = [b.get('n') for b in root.findall('b')]
+        book_lookup = {name.lower(): b for name, b in zip(book_names, root.findall('b'))}
+        if 'search_entry' in globals():
+            search_entry.book_list = sorted(book_names)
+        messagebox.showinfo("Success", f"Loaded translation: {os.path.basename(file_name)}")
+    except Exception as e:
+        show_error_with_copy("Error", f"Failed to load translation: {file_name}\n{e}")
+
+# Populate dropdown menu with available translations
+def on_version_change(selected_version):
+    if selected_version:
+        load_translation(os.path.join("xml", selected_version))
+
+translation_files = [f for f in os.listdir("xml") if f.endswith(".xml")]
+if "en_kjv.xml" in translation_files:
+    default_translation = "en_kjv.xml"
+else:
+    default_translation = translation_files[0] if translation_files else None
+
+if not default_translation:
+    show_error_with_copy("Error", "No translations found in the 'xml' folder.")
+    exit()
 
 # Search function
 def lookup_verse():
@@ -126,18 +175,11 @@ def search_whole_bible():
     if output_text.compare("end-1c", "==", "1.0"):
         output_text.insert(tk.END, "No results found.")
 
-
-# GUI setup
-root_win = tk.Tk()
-root_win.title("Franks Super Cool Bible Search Thingy!")
-root_win.geometry("1920x1080")
-root_win.resizable(True, True)
-
 # Label and Verse Lookup Entry (Book Chapter [Verse])
 verse_label = tk.Label(root_win, text="Verse Lookup (e.g., John 3 16)", font=("Helvetica", 16))
 verse_label.pack(padx=20, anchor='w')
 
-search_entry = AutocompleteEntry(book_names, root_win, font=("Helvetica", 20))
+search_entry = AutocompleteEntry([], root_win, font=("Helvetica", 20))  # Initialize with an empty list
 search_entry.insert(0, "e.g., John 3 16")
 search_entry.pack(fill=tk.X, padx=20, pady=(0, 10))
 search_entry.bind("<Return>", lambda e: lookup_verse())
@@ -151,17 +193,12 @@ full_search_entry.insert(0, "e.g., faith")
 full_search_entry.pack(fill=tk.X, padx=20, pady=(0, 10))
 full_search_entry.bind("<Return>", lambda e: search_whole_bible())
 
-# Add a dropdown menu for Bible version selection
-def on_version_change(selected_version):
-    if selected_version != "KJV":
-        messagebox.showinfo("Info", f"Currently, only 'KJV' is supported. Defaulting back to 'KJV'.")
-        version_var.set("KJV")
-
+# Update dropdown menu for Bible version selection
 version_label = tk.Label(root_win, text="Select Bible Version", font=("Helvetica", 16))
 version_label.pack(padx=20, anchor='w')
 
-version_var = tk.StringVar(value="KJV")
-version_dropdown = tk.OptionMenu(root_win, version_var, "KJV", command=on_version_change)
+version_var = tk.StringVar(value=default_translation)
+version_dropdown = tk.OptionMenu(root_win, version_var, *translation_files, command=on_version_change)
 version_dropdown.config(font=("Helvetica", 16))
 version_dropdown.pack(fill=tk.X, padx=20, pady=(0, 10))
 
@@ -176,6 +213,9 @@ output_text = tk.Text(output_frame, wrap=tk.WORD, font=("Georgia", 18), yscrollc
 output_text.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
 
 output_scrollbar.config(command=output_text.yview)
+
+# Load the default translation from the xml folder
+load_translation(os.path.join("xml", default_translation))
 
 root_win.bind("<Escape>", lambda e: root_win.destroy())
 
