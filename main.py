@@ -60,6 +60,42 @@ if not default_translation:
     show_error_with_copy("Error", "No translations found in the 'xml' folder.")
     exit()
 
+# Translation display names mapping
+translation_display_names = {
+    "ar_svd.xml": "Arabic – Smith & Van Dyke",
+    "de_schlachter.xml": "German – Schlachter",
+    "el_greek.xml": "Greek – Greek Bible",
+    "en_bbe.xml": "English – Bible in Basic English",
+    "en_kjv.xml": "English – King James Version",
+    "eo_esperanto.xml": "Esperanto – Esperanto Bible",
+    "es_rvr.xml": "Spanish – Reina-Valera",
+    "fi_finnish.xml": "Finnish – Finnish Bible",
+    "fi_pr.xml": "Finnish – Finnish PR Translation",
+    "fr_apee.xml": "French – APEE (Louis Segond)",
+    "fr_bbe.xml": "French – Bible en français courant",
+    "ko_ko.xml": "Korean – Korean Bible",
+    "pt_aa.xml": "Portuguese – Almeida Atualizada",
+    "pt_acf.xml": "Portuguese – Almeida Corrigida Fiel",
+    "pt_nvi.xml": "Portuguese – Nova Versão Internacional",
+    "ro_cornilescu.xml": "Romanian – Cornilescu",
+    "ru_synodal.xml": "Russian – Synodal Translation",
+    "vi_vietnamese.xml": "Vietnamese – Vietnamese Bible",
+    "zh_cuv.xml": "Chinese – Chinese Union Version",
+    "zh_ncv.xml": "Chinese – New Chinese Version",
+}
+
+# Create mapping from display names to filenames
+display_to_filename = {v: k for k, v in translation_display_names.items()}
+dropdown_options = sorted([translation_display_names.get(f, f) for f in translation_files])
+
+# Default selection display
+default_display = translation_display_names.get(default_translation, default_translation)
+version_var = tk.StringVar(value=default_display)
+
+def on_version_change_display(display_name):
+    selected_file = display_to_filename.get(display_name, display_name)
+    on_version_change(selected_file)
+
 # Search function
 def lookup_verse():
     query = search_entry.get().strip()
@@ -197,8 +233,7 @@ full_search_entry.bind("<Return>", lambda e: search_whole_bible())
 version_label = tk.Label(root_win, text="Select Bible Version", font=("Helvetica", 16))
 version_label.pack(padx=20, anchor='w')
 
-version_var = tk.StringVar(value=default_translation)
-version_dropdown = tk.OptionMenu(root_win, version_var, *translation_files, command=on_version_change)
+version_dropdown = tk.OptionMenu(root_win, version_var, *dropdown_options, command=on_version_change_display)
 version_dropdown.config(font=("Helvetica", 16))
 version_dropdown.pack(fill=tk.X, padx=20, pady=(0, 10))
 
