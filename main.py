@@ -151,9 +151,31 @@ full_search_entry.insert(0, "e.g., faith")
 full_search_entry.pack(fill=tk.X, padx=20, pady=(0, 10))
 full_search_entry.bind("<Return>", lambda e: search_whole_bible())
 
-# Output Display
-output_text = tk.Text(root_win, wrap=tk.WORD, font=("Georgia", 18))
-output_text.pack(expand=True, fill=tk.BOTH, padx=20, pady=10)
+# Add a dropdown menu for Bible version selection
+def on_version_change(selected_version):
+    if selected_version != "KJV":
+        messagebox.showinfo("Info", f"Currently, only 'KJV' is supported. Defaulting back to 'KJV'.")
+        version_var.set("KJV")
+
+version_label = tk.Label(root_win, text="Select Bible Version", font=("Helvetica", 16))
+version_label.pack(padx=20, anchor='w')
+
+version_var = tk.StringVar(value="KJV")
+version_dropdown = tk.OptionMenu(root_win, version_var, "KJV", command=on_version_change)
+version_dropdown.config(font=("Helvetica", 16))
+version_dropdown.pack(fill=tk.X, padx=20, pady=(0, 10))
+
+# Add a scrollbar to the output_text widget
+output_frame = tk.Frame(root_win)
+output_frame.pack(expand=True, fill=tk.BOTH, padx=20, pady=10)
+
+output_scrollbar = tk.Scrollbar(output_frame)
+output_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+output_text = tk.Text(output_frame, wrap=tk.WORD, font=("Georgia", 18), yscrollcommand=output_scrollbar.set)
+output_text.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
+
+output_scrollbar.config(command=output_text.yview)
 
 root_win.bind("<Escape>", lambda e: root_win.destroy())
 
