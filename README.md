@@ -2,6 +2,8 @@
 
 This repository contains a Python-based offline Bible search application. The main script, `main.py`, provides a graphical user interface (GUI) for searching and exploring the King James Version (KJV) Bible in XML format.
 
+Credit to https://github.com/thiagobodruk/bible for Providing Bibles in easy to read format.
+
 ## Features
 
 - **Verse Lookup**: Search for specific Bible verses by providing the book, chapter, and (optionally) the verse.
