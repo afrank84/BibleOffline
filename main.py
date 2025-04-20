@@ -173,16 +173,28 @@ def synchronize_right_side(book_name, chapter, verse=None):
 # Modified lookup_verse to synchronize with the right side
 def lookup_verse():
     query = search_entry.get().strip()
-    parts = query.split()
-    
-    if len(parts) not in [2, 3]:
-        messagebox.showerror("Invalid Input", "Use format: Book Chapter [Verse]")
+    parts = query.split(maxsplit=2)  # Split into at most 3 parts: book, chapter[:verse], and extra
+
+    if len(parts) < 2:
+        messagebox.showerror("Invalid Input", "Use format: Book Chapter[:Verse]")
         return
 
     book_name = parts[0].lower()
-    chapter = parts[1]
-    verse = parts[2] if len(parts) == 3 else None
+    chapter_and_verse = parts[1]
+    verse = None
 
+    # Handle chapter and verse separated by a colon
+    if ":" in chapter_and_verse:
+        chapter, verse = chapter_and_verse.split(":", 1)
+    else:
+        chapter = chapter_and_verse
+
+    # Validate chapter and verse
+    if not chapter.isdigit() or (verse and not verse.isdigit()):
+        messagebox.showerror("Invalid Input", "Chapter and verse must be numeric.")
+        return
+
+    # Check if the book exists in the lookup table
     if book_name not in book_lookup:
         messagebox.showerror("Not Found", f"No book named '{book_name}'")
         return
@@ -193,15 +205,18 @@ def lookup_verse():
         messagebox.showerror("Not Found", f"Chapter {chapter} not found in {book_name}")
         return
 
+    # Clear the left panel output
     output_text.delete(1.0, tk.END)
 
     if verse:
+        # Search for the specific verse
         verse_elem = chapter_elem.find(f"./v[@n='{verse}']")
         if verse_elem is not None:
             output_text.insert(tk.END, f"{book_name} {chapter}:{verse} — {verse_elem.text}")
         else:
             messagebox.showerror("Not Found", f"Verse {verse} not found in {book_name} {chapter}")
     else:
+        # Display all verses in the chapter
         for v in chapter_elem.findall('v'):
             output_text.insert(tk.END, f"{book_name} {chapter}:{v.get('n')} — {v.text}\n\n")
 
