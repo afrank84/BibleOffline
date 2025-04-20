@@ -1,4 +1,6 @@
 # Bible Offline Search Application
+![image](https://github.com/user-attachments/assets/a94ac7c1-2fb8-44d2-883d-54aac7758015)
+
 
 This repository contains a Python-based offline Bible search application. The main script, `main.py`, provides a graphical user interface (GUI) for searching and exploring multiple Bible translations in XML format.
 
