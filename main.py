@@ -227,7 +227,7 @@ def synchronize_right_side(book_name, chapter, verse=None):
         for v in chapter_elem.findall('v'):
             right_output_text.insert(tk.END, f"{book_name} {chapter}:{v.get('n')} — {v.text}\n\n")
 
-# Modified lookup_verse to synchronize with the right side
+# Modified lookup_verse to remove normalization logic
 def lookup_verse():
     query = search_entry.get().strip()
     parts = query.split(maxsplit=2)  # Split into at most 3 parts: book, chapter[:verse], and extra
