@@ -31,6 +31,14 @@ root_win.title("Franks Super Cool Bible Search Thingy!")
 root_win.geometry("1920x1080")
 root_win.resizable(True, True)
 
+# Create a PanedWindow for split-screen functionality
+paned_window = tk.PanedWindow(root_win, orient=tk.HORIZONTAL)
+paned_window.pack(fill=tk.BOTH, expand=True)
+
+# Left frame for the main content
+left_frame = tk.Frame(paned_window, width=960, height=1080)
+paned_window.add(left_frame)
+
 # Function to load and parse the selected Bible translation
 def load_translation(file_name):
     global tree, root, book_names, book_lookup
@@ -96,7 +104,73 @@ def on_version_change_display(display_name):
     selected_file = display_to_filename.get(display_name, display_name)
     on_version_change(selected_file)
 
-# Search function
+# Initialize right_frame globally
+right_frame = None
+
+# Function to toggle split-screen mode
+def toggle_split_screen():
+    global right_frame, right_output_text, right_version_var, right_version_dropdown
+    try:
+        if right_frame:
+            paned_window.forget(right_frame)
+            right_frame = None
+        else:
+            # Create the right frame
+            right_frame = tk.Frame(paned_window, width=960, height=1080)
+            paned_window.add(right_frame)
+
+            # Dropdown for the right side
+            right_version_var = tk.StringVar(value=default_display)
+            right_version_dropdown = tk.OptionMenu(right_frame, right_version_var, *dropdown_options, command=on_version_change_right)
+            right_version_dropdown.config(font=("Helvetica", 16))
+            right_version_dropdown.pack(fill=tk.X, padx=20, pady=(0, 10))
+
+            # Output text for the right side
+            right_output_scrollbar = tk.Scrollbar(right_frame)
+            right_output_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+            right_output_text = tk.Text(right_frame, wrap=tk.WORD, font=("Georgia", 18), yscrollcommand=right_output_scrollbar.set)
+            right_output_text.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
+
+            right_output_scrollbar.config(command=right_output_text.yview)
+
+            # Synchronize the right side with the current state of the left side
+            current_query = search_entry.get().strip()
+            if current_query:
+                parts = current_query.split()
+                if len(parts) in [2, 3]:
+                    book_name = parts[0]
+                    chapter = parts[1]
+                    verse = parts[2] if len(parts) == 3 else None
+                    synchronize_right_side(book_name, chapter, verse)
+    except Exception as e:
+        print(f"Toggle error: {e}")
+
+# Function to synchronize the right side with the left side's search
+def synchronize_right_side(book_name, chapter, verse=None):
+    if "right_output_text" in globals():
+        right_output_text.delete(1.0, tk.END)
+        book = book_lookup.get(book_name.lower())
+        if not book:
+            right_output_text.insert(tk.END, f"No book named '{book_name}' found in the selected translation.")
+            return
+
+        chapter_elem = book.find(f"./c[@n='{chapter}']")
+        if not chapter_elem:
+            right_output_text.insert(tk.END, f"Chapter {chapter} not found in {book_name}.")
+            return
+
+        if verse:
+            verse_elem = chapter_elem.find(f"./v[@n='{verse}']")
+            if verse_elem:
+                right_output_text.insert(tk.END, f"{book_name} {chapter}:{verse} — {verse_elem.text}")
+            else:
+                right_output_text.insert(tk.END, f"Verse {verse} not found in {book_name} {chapter}.")
+        else:
+            for v in chapter_elem.findall('v'):
+                right_output_text.insert(tk.END, f"{book_name} {chapter}:{v.get('n')} — {v.text}\n\n")
+
+# Modified lookup_verse to synchronize with the right side
 def lookup_verse():
     query = search_entry.get().strip()
     parts = query.split()
@@ -130,6 +204,52 @@ def lookup_verse():
     else:
         for v in chapter_elem.findall('v'):
             output_text.insert(tk.END, f"{book_name} {chapter}:{v.get('n')} — {v.text}\n\n")
+
+    # Synchronize the right side
+    synchronize_right_side(book_name, chapter, verse)
+
+# Function to handle version change on the right side
+def on_version_change_right(display_name):
+    selected_file = display_to_filename.get(display_name, display_name)
+    load_translation(os.path.join("xml", selected_file))
+
+# Search function
+def search_whole_bible():
+    query = full_search_entry.get().strip().lower()
+    if not query:
+        messagebox.showerror("Empty Search", "Please enter a word or phrase to search.")
+        return
+
+    results = []
+    output_text.delete(1.0, tk.END)
+    output_text.tag_config("highlight", background="yellow", foreground="black")
+
+    for book in root.findall('b'):
+        book_name = book.get('n')
+        for chapter in book.findall('c'):
+            chapter_num = chapter.get('n')
+            for verse in chapter.findall('v'):
+                verse_text = verse.text
+                if query in verse_text.lower():
+                    result_line = f"{book_name} {chapter_num}:{verse.get('n')} — {verse_text}\n\n"
+                    start_index = output_text.index(tk.INSERT)
+                    output_text.insert(tk.END, result_line)
+                    end_index = output_text.index(tk.INSERT)
+
+                    # Highlight all matches in the inserted line
+                    line_lower = result_line.lower()
+                    idx = 0
+                    while True:
+                        idx = line_lower.find(query, idx)
+                        if idx == -1:
+                            break
+                        tag_start = f"{start_index}+{idx}c"
+                        tag_end = f"{start_index}+{idx+len(query)}c"
+                        output_text.tag_add("highlight", tag_start, tag_end)
+                        idx += len(query)
+
+    if output_text.compare("end-1c", "==", "1.0"):
+        output_text.insert(tk.END, "No results found.")
 
 class AutocompleteEntry(tk.Entry):
     def __init__(self, book_list, *args, **kwargs):
@@ -174,71 +294,38 @@ class AutocompleteEntry(tk.Entry):
         self.hide_listbox()
         self.icursor(tk.END)
 
-def search_whole_bible():
-    query = full_search_entry.get().strip().lower()
-    if not query:
-        messagebox.showerror("Empty Search", "Please enter a word or phrase to search.")
-        return
-
-    results = []
-    output_text.delete(1.0, tk.END)
-    output_text.tag_config("highlight", background="yellow", foreground="black")
-
-    for book in root.findall('b'):
-        book_name = book.get('n')
-        for chapter in book.findall('c'):
-            chapter_num = chapter.get('n')
-            for verse in chapter.findall('v'):
-                verse_text = verse.text
-                if query in verse_text.lower():
-                    result_line = f"{book_name} {chapter_num}:{verse.get('n')} — {verse_text}\n\n"
-                    start_index = output_text.index(tk.INSERT)
-                    output_text.insert(tk.END, result_line)
-                    end_index = output_text.index(tk.INSERT)
-
-                    # Highlight all matches in the inserted line
-                    line_lower = result_line.lower()
-                    idx = 0
-                    while True:
-                        idx = line_lower.find(query, idx)
-                        if idx == -1:
-                            break
-                        tag_start = f"{start_index}+{idx}c"
-                        tag_end = f"{start_index}+{idx+len(query)}c"
-                        output_text.tag_add("highlight", tag_start, tag_end)
-                        idx += len(query)
-
-    if output_text.compare("end-1c", "==", "1.0"):
-        output_text.insert(tk.END, "No results found.")
-
 # Label and Verse Lookup Entry (Book Chapter [Verse])
-verse_label = tk.Label(root_win, text="Verse Lookup (e.g., John 3 16)", font=("Helvetica", 16))
+verse_label = tk.Label(left_frame, text="Verse Lookup (e.g., John 3 16)", font=("Helvetica", 16))
 verse_label.pack(padx=20, anchor='w')
 
-search_entry = AutocompleteEntry([], root_win, font=("Helvetica", 20))  # Initialize with an empty list
+search_entry = AutocompleteEntry([], left_frame, font=("Helvetica", 20))  # Initialize with an empty list
 search_entry.insert(0, "e.g., John 3 16")
 search_entry.pack(fill=tk.X, padx=20, pady=(0, 10))
 search_entry.bind("<Return>", lambda e: lookup_verse())
 
 # Label and Full Bible Search Entry
-full_search_label = tk.Label(root_win, text="Search Entire Bible for Word/Phrase", font=("Helvetica", 16))
+full_search_label = tk.Label(left_frame, text="Search Entire Bible for Word/Phrase", font=("Helvetica", 16))
 full_search_label.pack(padx=20, anchor='w')
 
-full_search_entry = tk.Entry(root_win, font=("Helvetica", 20))
+full_search_entry = tk.Entry(left_frame, font=("Helvetica", 20))
 full_search_entry.insert(0, "e.g., faith")
 full_search_entry.pack(fill=tk.X, padx=20, pady=(0, 10))
 full_search_entry.bind("<Return>", lambda e: search_whole_bible())
 
 # Update dropdown menu for Bible version selection
-version_label = tk.Label(root_win, text="Select Bible Version", font=("Helvetica", 16))
+version_label = tk.Label(left_frame, text="Select Bible Version", font=("Helvetica", 16))
 version_label.pack(padx=20, anchor='w')
 
-version_dropdown = tk.OptionMenu(root_win, version_var, *dropdown_options, command=on_version_change_display)
+version_dropdown = tk.OptionMenu(left_frame, version_var, *dropdown_options, command=on_version_change_display)
 version_dropdown.config(font=("Helvetica", 16))
 version_dropdown.pack(fill=tk.X, padx=20, pady=(0, 10))
 
+# Add a button to toggle split-screen mode
+split_screen_button = tk.Button(left_frame, text="Toggle Split Screen", font=("Helvetica", 16), command=toggle_split_screen)
+split_screen_button.pack(pady=10)
+
 # Add a scrollbar to the output_text widget
-output_frame = tk.Frame(root_win)
+output_frame = tk.Frame(left_frame)
 output_frame.pack(expand=True, fill=tk.BOTH, padx=20, pady=10)
 
 output_scrollbar = tk.Scrollbar(output_frame)
