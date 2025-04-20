@@ -287,10 +287,16 @@ def search_whole_bible():
         messagebox.showerror("Empty Search", "Please enter a word or phrase to search.")
         return
 
-    results = []
+    results_count = 0  # Initialize results counter
     output_text.delete(1.0, tk.END)
     output_text.tag_config("highlight", background="yellow", foreground="black")
 
+    # Clear right panel output if active
+    if "right_output_text" in globals() and right_output_text:
+        right_output_text.delete(1.0, tk.END)
+        right_output_text.tag_config("highlight", background="yellow", foreground="black")
+
+    # Search in the left panel's translation
     for book in root.findall('b'):
         book_name = book.get('n')
         for chapter in book.findall('c'):
@@ -298,6 +304,7 @@ def search_whole_bible():
             for verse in chapter.findall('v'):
                 verse_text = verse.text
                 if query in verse_text.lower():
+                    results_count += 1  # Increment results counter
                     result_line = f"{book_name} {chapter_num}:{verse.get('n')} — {verse_text}\n\n"
                     start_index = output_text.index(tk.INSERT)
                     output_text.insert(tk.END, result_line)
@@ -315,8 +322,46 @@ def search_whole_bible():
                         output_text.tag_add("highlight", tag_start, tag_end)
                         idx += len(query)
 
-    if output_text.compare("end-1c", "==", "1.0"):
+    # Search in the right panel's translation if active
+    if "right_root" in globals() and right_root:
+        for book in right_root.findall('b'):
+            book_name = book.get('n')
+            for chapter in book.findall('c'):
+                chapter_num = chapter.get('n')
+                for verse in chapter.findall('v'):
+                    verse_text = verse.text
+                    if query in verse_text.lower():
+                        results_count += 1  # Increment results counter
+                        result_line = f"{book_name} {chapter_num}:{verse.get('n')} — {verse_text}\n\n"
+                        right_start_index = right_output_text.index(tk.INSERT)
+                        right_output_text.insert(tk.END, result_line)
+                        right_end_index = right_output_text.index(tk.INSERT)
+
+                        # Highlight matches in the right panel
+                        right_line_lower = result_line.lower()
+                        right_idx = 0
+                        while True:
+                            right_idx = right_line_lower.find(query, right_idx)
+                            if right_idx == -1:
+                                break
+                            right_tag_start = f"{right_start_index}+{right_idx}c"
+                            right_tag_end = f"{right_start_index}+{right_idx+len(query)}c"
+                            right_output_text.tag_add("highlight", right_tag_start, right_tag_end)
+                            right_idx += len(query)
+
+    # Display "No results found" if no matches in either panel
+    if results_count == 0:
         output_text.insert(tk.END, "No results found.")
+        if "right_output_text" in globals() and right_output_text:
+            right_output_text.insert(tk.END, "No results found.")
+
+    # Update the results count label
+    results_label.config(text=f"Total Results: {results_count}")
+    results_label.pack()
+
+# Add a label to display the total number of results
+results_label = tk.Label(left_frame, text="Total Results: 0", font=("Helvetica", 16))
+results_label.pack(padx=20, anchor='w')
 
 class AutocompleteEntry(tk.Entry):
     def __init__(self, book_list, *args, **kwargs):
