@@ -87,7 +87,7 @@ menu_bar.add_cascade(label="View", menu=view_menu)
 
 # About menu
 about_menu = tk.Menu(menu_bar, tearoff=0)
-about_menu.add_command(label="About", command=lambda: messagebox.showinfo("About", "Bible Offline\nVersion 1.0"))
+about_menu.add_command(label="Version", command=lambda: messagebox.showinfo("Version", "Bible Offline\nVersion 1.0"))
 menu_bar.add_cascade(label="About", menu=about_menu)
 
 # Attach the menu bar to the root window
