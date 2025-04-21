@@ -31,6 +31,68 @@ root_win.title("Franks Super Cool Bible Search Thingy!")
 root_win.geometry("1920x1080")
 root_win.resizable(True, True)
 
+# Function to toggle split-screen mode
+def toggle_split_screen():
+    global right_frame, right_output_text, right_version_var, right_version_dropdown, right_book_lookup
+    try:
+        if right_frame:
+            paned_window.forget(right_frame)
+            right_frame = None
+        else:
+            # Create the right frame
+            right_frame = tk.Frame(paned_window, width=960, height=1080)
+            paned_window.add(right_frame)
+
+            # Dropdown for the right side
+            right_version_var = tk.StringVar(value=default_display)
+            right_version_dropdown = tk.OptionMenu(right_frame, right_version_var, *dropdown_options, command=on_version_change_right)
+            right_version_dropdown.config(font=("Helvetica", 16))
+            right_version_dropdown.pack(fill=tk.X, padx=20, pady=(0, 10))
+
+            # Output text for the right side
+            right_output_scrollbar = tk.Scrollbar(right_frame)
+            right_output_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+            right_output_text = tk.Text(right_frame, wrap=tk.WORD, font=("Georgia", 18), yscrollcommand=right_output_scrollbar.set)
+            right_output_text.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
+
+            right_output_scrollbar.config(command=right_output_text.yview)
+
+            # Synchronize the right side with the current state of the left side
+            current_query = search_entry.get().strip()
+            if current_query:
+                parts = current_query.split()
+                if len(parts) in [2, 3]:
+                    book_name = parts[0]
+                    chapter = parts[1]
+                    verse = parts[2] if len(parts) == 3 else None
+                    synchronize_right_side(book_name, chapter, verse)
+    except Exception as e:
+        print(f"Toggle error: {e}")
+
+# Create a menu bar
+menu_bar = tk.Menu(root_win)
+
+# File menu
+file_menu = tk.Menu(menu_bar, tearoff=0)
+file_menu.add_command(label="Open Translation", command=lambda: messagebox.showinfo("File", "Open Translation clicked"))
+file_menu.add_separator()
+file_menu.add_command(label="Exit", command=root_win.destroy)
+menu_bar.add_cascade(label="File", menu=file_menu)
+
+# View menu
+view_menu = tk.Menu(menu_bar, tearoff=0)
+view_menu.add_command(label="Toggle Split Screen", command=toggle_split_screen)
+menu_bar.add_cascade(label="View", menu=view_menu)
+
+# About menu
+about_menu = tk.Menu(menu_bar, tearoff=0)
+about_menu.add_command(label="About", command=lambda: messagebox.showinfo("About", "Bible Offline\nVersion 1.0"))
+menu_bar.add_cascade(label="About", menu=about_menu)
+
+# Attach the menu bar to the root window
+root_win.config(menu=menu_bar)
+
 # Create a PanedWindow for split-screen functionality
 paned_window = tk.PanedWindow(root_win, orient=tk.HORIZONTAL)
 paned_window.pack(fill=tk.BOTH, expand=True)
@@ -140,45 +202,6 @@ def on_version_change_right(display_name):
             else:
                 chapter = chapter_and_verse
             synchronize_right_side(book_name, chapter, verse)
-
-# Function to toggle split-screen mode
-def toggle_split_screen():
-    global right_frame, right_output_text, right_version_var, right_version_dropdown, right_book_lookup
-    try:
-        if right_frame:
-            paned_window.forget(right_frame)
-            right_frame = None
-        else:
-            # Create the right frame
-            right_frame = tk.Frame(paned_window, width=960, height=1080)
-            paned_window.add(right_frame)
-
-            # Dropdown for the right side
-            right_version_var = tk.StringVar(value=default_display)
-            right_version_dropdown = tk.OptionMenu(right_frame, right_version_var, *dropdown_options, command=on_version_change_right)
-            right_version_dropdown.config(font=("Helvetica", 16))
-            right_version_dropdown.pack(fill=tk.X, padx=20, pady=(0, 10))
-
-            # Output text for the right side
-            right_output_scrollbar = tk.Scrollbar(right_frame)
-            right_output_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-
-            right_output_text = tk.Text(right_frame, wrap=tk.WORD, font=("Georgia", 18), yscrollcommand=right_output_scrollbar.set)
-            right_output_text.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
-
-            right_output_scrollbar.config(command=right_output_text.yview)
-
-            # Synchronize the right side with the current state of the left side
-            current_query = search_entry.get().strip()
-            if current_query:
-                parts = current_query.split()
-                if len(parts) in [2, 3]:
-                    book_name = parts[0]
-                    chapter = parts[1]
-                    verse = parts[2] if len(parts) == 3 else None
-                    synchronize_right_side(book_name, chapter, verse)
-    except Exception as e:
-        print(f"Toggle error: {e}")
 
 # Function to synchronize the right side with the left side's search
 def synchronize_right_side(book_name, chapter, verse=None):
