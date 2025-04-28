@@ -486,6 +486,34 @@ output_scrollbar.config(command=output_text.yview)
 # Load the default translation from the xml folder
 load_translation(os.path.join("xml", default_translation))
 
+# Function to enable or disable dark mode
+def dark_mode():
+    dark_mode_enabled = root_win.cget("bg") == "black"
+    new_bg = "white" if dark_mode_enabled else "black"
+    new_fg = "black" if dark_mode_enabled else "white"
+
+    # Update root window background
+    root_win.config(bg=new_bg)
+
+    # Recursively update all widgets
+    def update_widget_colors(widget):
+        if isinstance(widget, (tk.Text, tk.Entry)):
+            widget.config(bg=new_bg, fg=new_fg, insertbackground=new_fg)
+        elif isinstance(widget, (tk.Label, tk.Button, tk.OptionMenu)):
+            widget.config(bg=new_bg, fg=new_fg)
+        elif isinstance(widget, (tk.PanedWindow, tk.Frame)):
+            widget.config(bg=new_bg)
+        for child in widget.winfo_children():
+            update_widget_colors(child)
+
+    update_widget_colors(root_win)
+
+    # Update menu bar colors
+    menu_bar.config(bg=new_bg, fg=new_fg)
+
+# Add dark mode option to the View menu
+view_menu.add_command(label="Dark Mode", command=dark_mode)
+
 root_win.bind("<Escape>", lambda e: root_win.destroy())
 
 root_win.mainloop()
