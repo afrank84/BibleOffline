@@ -51,7 +51,7 @@ def toggle_split_screen():
             inner_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
 
             # Add a spacer to push dropdown down
-            spacer = tk.Frame(inner_frame, height=173)
+            spacer = tk.Frame(inner_frame, height=229)
             spacer.pack()
 
             # Dropdown for the right side
@@ -442,7 +442,7 @@ class AutocompleteEntry(tk.Entry):
         self.icursor(tk.END)
 
 # Label and Verse Lookup Entry (Book Chapter [Verse])
-verse_label = tk.Label(left_frame, text="Verse Lookup (e.g., John 3 16)", font=("Helvetica", 16))
+verse_label = tk.Label(left_frame, text="Verse Lookup (e.g., John 3:16)", font=("Helvetica", 16))
 verse_label.pack(padx=20, anchor='w')
 
 search_entry = AutocompleteEntry([], left_frame, font=("Helvetica", 20))  # Initialize with an empty list
