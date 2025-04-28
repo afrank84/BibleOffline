@@ -39,24 +39,36 @@ def toggle_split_screen():
             paned_window.forget(right_frame)
             right_frame = None
         else:
-            # Create the right frame
+            # Create the right frame and add it to the paned window
             right_frame = tk.Frame(paned_window, width=960, height=1080)
             paned_window.add(right_frame)
 
+            # Prevent the frame from shrinking to fit its contents
+            right_frame.pack_propagate(False)
+
+            # Create an inner frame with padding
+            inner_frame = tk.Frame(right_frame)
+            inner_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+
+            # Add a spacer to push dropdown down
+            spacer = tk.Frame(inner_frame, height=173)
+            spacer.pack()
+
             # Dropdown for the right side
             right_version_var = tk.StringVar(value=default_display)
-            right_version_dropdown = tk.OptionMenu(right_frame, right_version_var, *dropdown_options, command=on_version_change_right)
+            right_version_dropdown = tk.OptionMenu(inner_frame, right_version_var, *dropdown_options, command=on_version_change_right)
             right_version_dropdown.config(font=("Helvetica", 16))
-            right_version_dropdown.pack(fill=tk.X, padx=20, pady=(0, 10))
+            right_version_dropdown.pack(fill=tk.X, pady=(0, 10))
 
             # Output text for the right side
-            right_output_scrollbar = tk.Scrollbar(right_frame)
+            right_output_scrollbar = tk.Scrollbar(inner_frame)
             right_output_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-            right_output_text = tk.Text(right_frame, wrap=tk.WORD, font=("Georgia", 18), yscrollcommand=right_output_scrollbar.set)
+            right_output_text = tk.Text(inner_frame, wrap=tk.WORD, font=("Georgia", 18), yscrollcommand=right_output_scrollbar.set)
             right_output_text.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
 
             right_output_scrollbar.config(command=right_output_text.yview)
+
 
             # Synchronize the right side with the current state of the left side
             current_query = search_entry.get().strip()
@@ -434,7 +446,7 @@ verse_label = tk.Label(left_frame, text="Verse Lookup (e.g., John 3 16)", font=(
 verse_label.pack(padx=20, anchor='w')
 
 search_entry = AutocompleteEntry([], left_frame, font=("Helvetica", 20))  # Initialize with an empty list
-search_entry.insert(0, "e.g., John 3 16")
+search_entry.insert(0, " ")
 search_entry.pack(fill=tk.X, padx=20, pady=(0, 10))
 search_entry.bind("<Return>", lambda e: lookup_verse())
 
@@ -443,9 +455,13 @@ full_search_label = tk.Label(left_frame, text="Search Entire Bible for Word/Phra
 full_search_label.pack(padx=20, anchor='w')
 
 full_search_entry = tk.Entry(left_frame, font=("Helvetica", 20))
-full_search_entry.insert(0, "e.g., faith")
+full_search_entry.insert(0, " ")
 full_search_entry.pack(fill=tk.X, padx=20, pady=(0, 10))
 full_search_entry.bind("<Return>", lambda e: search_whole_bible())
+
+# Add a button to toggle split-screen mode
+split_screen_button = tk.Button(left_frame, text="Toggle Split Screen", font=("Helvetica", 16), command=toggle_split_screen)
+split_screen_button.pack(pady=10)
 
 # Update dropdown menu for Bible version selection
 version_label = tk.Label(left_frame, text="Select Bible Version", font=("Helvetica", 16))
@@ -454,10 +470,6 @@ version_label.pack(padx=20, anchor='w')
 version_dropdown = tk.OptionMenu(left_frame, version_var, *dropdown_options, command=on_version_change_display)
 version_dropdown.config(font=("Helvetica", 16))
 version_dropdown.pack(fill=tk.X, padx=20, pady=(0, 10))
-
-# Add a button to toggle split-screen mode
-split_screen_button = tk.Button(left_frame, text="Toggle Split Screen", font=("Helvetica", 16), command=toggle_split_screen)
-split_screen_button.pack(pady=10)
 
 # Add a scrollbar to the output_text widget
 output_frame = tk.Frame(left_frame)
