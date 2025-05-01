@@ -68,6 +68,20 @@ def toggle_split_screen():
             right_output_text = tk.Text(inner_frame, wrap=tk.WORD, font=("Georgia", 18), yscrollcommand=right_output_scrollbar.set)
             right_output_text.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
 
+            # Context menu for right panel
+            right_context_menu = tk.Menu(root_win, tearoff=0)
+            right_context_menu.add_command(label="Highlight", command=lambda: highlight_selection(right_output_text))
+
+            def show_right_context_menu(event):
+                try:
+                    if right_output_text.tag_ranges(tk.SEL):
+                        right_context_menu.tk_popup(event.x_root, event.y_root)
+                finally:
+                    right_context_menu.grab_release()
+
+            right_output_text.bind("<Button-3>", show_right_context_menu)
+
+
             right_output_scrollbar.config(command=right_output_text.yview)
 
 
@@ -470,10 +484,41 @@ output_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 output_text = tk.Text(output_frame, wrap=tk.WORD, font=("Georgia", 18), yscrollcommand=output_scrollbar.set)
 output_text.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
 
+
 output_scrollbar.config(command=output_text.yview)
 
 # Load the default translation from the xml folder
 load_translation(os.path.join("xml", default_translation))
+
+# Define a shared highlight tag style
+def configure_highlight_tags():
+    output_text.tag_configure("user_highlight", background="lightgreen")
+    if "right_output_text" in globals() and right_output_text:
+        right_output_text.tag_configure("user_highlight", background="lightgreen")
+
+# Function to apply highlight
+def highlight_selection(text_widget):
+    try:
+        start = text_widget.index(tk.SEL_FIRST)
+        end = text_widget.index(tk.SEL_LAST)
+        text_widget.tag_add("user_highlight", start, end)
+    except tk.TclError:
+        pass  # No selection
+
+# Context menu for left panel
+left_context_menu = tk.Menu(root_win, tearoff=0)
+left_context_menu.add_command(label="Highlight", command=lambda: highlight_selection(output_text))
+
+def show_left_context_menu(event):
+    try:
+        if output_text.tag_ranges(tk.SEL):
+            left_context_menu.tk_popup(event.x_root, event.y_root)
+    finally:
+        left_context_menu.grab_release()
+
+output_text.bind("<Button-3>", show_left_context_menu)
+
+
 
 # Function to enable or disable dark mode
 def dark_mode():
@@ -504,5 +549,6 @@ def dark_mode():
 view_menu.add_command(label="Dark Mode", command=dark_mode)
 
 root_win.bind("<Escape>", lambda e: root_win.destroy())
+configure_highlight_tags()
 
 root_win.mainloop()
