@@ -1,5 +1,6 @@
 import os
 import tkinter as tk
+import re
 from tkinter import messagebox
 import xml.etree.ElementTree as ET
 
@@ -265,55 +266,43 @@ def synchronize_right_side(book_name, chapter, verse=None):
 # Modified lookup_verse to remove normalization logic
 def lookup_verse():
     query = search_entry.get().strip()
-    parts = query.split(maxsplit=2)  # Split into at most 3 parts: book, chapter[:verse], and extra
 
-    if len(parts) < 2:
-        messagebox.showerror("Invalid Input", "Use format: Book Chapter[:Verse]")
+    # Use regex to properly extract book name, chapter, and optional verse
+    import re
+    match = re.match(r'^([1-3]?\s?[A-Za-z]+(?:\s[A-Za-z]+)*)\s+(\d+)(?::(\d+))?$', query)
+    if not match:
+        messagebox.showerror("Invalid Input", "Use format: Book Chapter[:Verse] — e.g., 'John 3:16'")
         return
 
-    book_name = parts[0].lower()
-    chapter_and_verse = parts[1]
-    verse = None
+    book_name = match.group(1).strip()
+    chapter = match.group(2)
+    verse = match.group(3)
 
-    # Handle chapter and verse separated by a colon
-    if ":" in chapter_and_verse:
-        chapter, verse = chapter_and_verse.split(":", 1)
-    else:
-        chapter = chapter_and_verse
-
-    # Validate chapter and verse
-    if not chapter.isdigit() or (verse and not verse.isdigit()):
-        messagebox.showerror("Invalid Input", "Chapter and verse must be numeric.")
-        return
-
-    # Check if the book exists in the lookup table
-    if book_name not in book_lookup:
+    # Validate that the book exists
+    if book_name.lower() not in book_lookup:
         messagebox.showerror("Not Found", f"No book named '{book_name}'")
         return
 
-    book = book_lookup[book_name]
+    book = book_lookup[book_name.lower()]
     chapter_elem = book.find(f"./c[@n='{chapter}']")
     if chapter_elem is None:
         messagebox.showerror("Not Found", f"Chapter {chapter} not found in {book_name}")
         return
 
-    # Clear the left panel output
     output_text.delete(1.0, tk.END)
 
     if verse:
-        # Search for the specific verse
         verse_elem = chapter_elem.find(f"./v[@n='{verse}']")
         if verse_elem is not None:
             output_text.insert(tk.END, f"{book_name} {chapter}:{verse} — {verse_elem.text}")
         else:
             messagebox.showerror("Not Found", f"Verse {verse} not found in {book_name} {chapter}")
     else:
-        # Display all verses in the chapter
         for v in chapter_elem.findall('v'):
             output_text.insert(tk.END, f"{book_name} {chapter}:{v.get('n')} — {v.text}\n\n")
 
-    # Synchronize the right side
     synchronize_right_side(book_name, chapter, verse)
+
 
 # Search function
 def search_whole_bible():
