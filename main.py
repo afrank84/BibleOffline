@@ -181,6 +181,37 @@ translation_display_names = {
     "zh_ncv.xml": "Chinese – New Chinese Version",
 }
 
+# Add functionality for Ctrl+F to search text in the output_text widget
+def find_in_text_widget(text_widget):
+    def search():
+        text_widget.tag_remove("search_highlight", "1.0", tk.END)
+        query = search_entry.get().strip()
+        if not query:
+            return
+        start_pos = "1.0"
+        while True:
+            start_pos = text_widget.search(query, start_pos, stopindex=tk.END, nocase=True)
+            if not start_pos:
+                break
+            end_pos = f"{start_pos}+{len(query)}c"
+            text_widget.tag_add("search_highlight", start_pos, end_pos)
+            start_pos = end_pos
+        text_widget.tag_config("search_highlight", background="yellow", foreground="black")
+
+    # Create a popup window for search
+    search_window = tk.Toplevel(root_win)
+    search_window.title("Find")
+    search_window.geometry("300x100")
+    search_window.resizable(False, False)
+
+    tk.Label(search_window, text="Find:").pack(pady=5)
+    search_entry = tk.Entry(search_window, font=("Helvetica", 14))
+    search_entry.pack(fill=tk.X, padx=10, pady=5)
+    tk.Button(search_window, text="Search", command=search).pack(pady=5)
+
+# Bind Ctrl+F to open the search popup
+root_win.bind("<Control-f>", lambda e: find_in_text_widget(output_text))
+
 # Create mapping from display names to filenames
 display_to_filename = {v: k for k, v in translation_display_names.items()}
 dropdown_options = sorted([translation_display_names.get(f, f) for f in translation_files])
