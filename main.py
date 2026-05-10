@@ -263,6 +263,8 @@ def on_version_change_right(display_name):
 
 # Function to synchronize the right side with the left side's search
 def synchronize_right_side(book_name, chapter, verse=None):
+    global right_root, right_book_lookup
+
     if "right_output_text" not in globals():
         return  # Right panel not active
 
@@ -273,41 +275,51 @@ def synchronize_right_side(book_name, chapter, verse=None):
         right_output_text.insert(tk.END, "Invalid chapter or verse format.")
         return
 
-    # Get the selected file for the right panel dropdown
-    selected_display = right_version_var.get()
-    selected_file = display_to_filename.get(selected_display, selected_display)
-    try:
-        # Lazy-load the right panel's translation data
-        right_tree = ET.parse(os.path.join("xml", selected_file))
-        right_root = right_tree.getroot()
-        right_book_lookup = {b.get('n').lower(): b for b in right_root.findall('b')}
-    except Exception as e:
-        right_output_text.insert(tk.END, f"Error loading translation: {e}")
+    # Ensure translation data is loaded
+    if right_root is None or not right_book_lookup:
+        right_output_text.insert(tk.END, "Right panel translation not loaded.")
         return
 
     book_name = book_name.lower()
+
     if book_name not in right_book_lookup:
-        right_output_text.insert(tk.END, f"No book named '{book_name}' found in the selected translation.")
+        right_output_text.insert(
+            tk.END,
+            f"No book named '{book_name}' found in the selected translation."
+        )
         return
 
     book = right_book_lookup[book_name]
+
     chapter_elem = book.find(f"./c[@n='{chapter}']")
+
     if chapter_elem is None:
-        right_output_text.insert(tk.END, f"Chapter {chapter} not found in {book_name}.")
+        right_output_text.insert(
+            tk.END,
+            f"Chapter {chapter} not found in {book_name}."
+        )
         return
 
     if verse:
-        # Search for the specific verse
         verse_elem = chapter_elem.find(f"./v[@n='{verse}']")
-        if verse_elem is not None:
-            right_output_text.insert(tk.END, f"{book_name} {chapter}:{verse} — {verse_elem.text}")
-        else:
-            right_output_text.insert(tk.END, f"Verse {verse} not found in {book_name} {chapter}.")
-    else:
-        # Display all verses in the chapter
-        for v in chapter_elem.findall('v'):
-            right_output_text.insert(tk.END, f"{book_name} {chapter}:{v.get('n')} — {v.text}\n\n")
 
+        if verse_elem is not None:
+            right_output_text.insert(
+                tk.END,
+                f"{book_name} {chapter}:{verse} — {verse_elem.text}"
+            )
+        else:
+            right_output_text.insert(
+                tk.END,
+                f"Verse {verse} not found in {book_name} {chapter}."
+            )
+
+    else:
+        for v in chapter_elem.findall('v'):
+            right_output_text.insert(
+                tk.END,
+                f"{book_name} {chapter}:{v.get('n')} — {v.text}\n\n"
+            )
 # Modified lookup_verse to remove normalization logic
 def lookup_verse():
     query = search_entry.get().strip()
